@@ -65,7 +65,6 @@
         .btn-config { background: #333; color: white; font-size: 1.5rem; }
         .btn-reset { background: #444; color: white; font-size: 0.7rem; }
 
-        /* Config v19 Layout */
         #config-screen { display: none; width: 100%; max-width: 500px; padding: 20px; flex-direction: column; height: 100vh; overflow-y: auto; background: var(--f1-black); }
         .theme-selector { display: flex; gap: 10px; margin-top: 10px; justify-content: center; }
         .theme-dot { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
@@ -96,13 +95,11 @@
             <div class="theme-dot" style="background:#101810" onclick="setTheme('#101810')"></div>
         </div>
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid #333;">
-        
         <div style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; border-radius:8px;">
             <button onclick="changeCount(-1)" style="width:40px; height:40px; background:#333; color:#fff; border:none; border-radius:5px; font-size:1.5rem;">-</button>
             <div style="text-align:center;"><p style="font-size:0.5rem; color:#888;">SECTORS</p><span id="display-count" style="font-size:1.4rem; color:var(--f1-red); font-weight:bold;">3</span></div>
             <button onclick="changeCount(1)" style="width:40px; height:40px; background:#333; color:#fff; border:none; border-radius:5px; font-size:1.5rem;">+</button>
         </div>
-
         <div id="config-items" style="margin-top:20px;"></div>
         <button id="btn-save" style="width:100%; padding:18px; margin-top:20px; border-radius:8px; border:none; background:#fff; color:#000; font-family:'Orbitron'; font-weight:bold;">SAVE & CLOSE</button>
     </div>
@@ -141,7 +138,7 @@
             row.classList.add('row-cont');
             const absIdx = sectors.length + i;
             if (absIdx < currentIdx) row.classList.add('row-past');
-            if (absIdx === currentIdx && (mode === "RUNNING" || mode === "FINISHED")) row.classList.add('row-active');
+            if (absIdx === currentIdx && (mode === "RUNNING" || mode === "FINISHED" || mode === "PAUSED")) row.classList.add('row-active');
             if (cs.time !== null) applySectorStats(row, i, cs.time, null, true);
             list.appendChild(row);
         });
@@ -190,17 +187,16 @@
         clearInterval(timerInterval);
         const now = Date.now();
         const currentSessionMs = (now - startTime);
+        totalElapsedAtPause += currentSessionMs;
 
         if (currentIdx < sectors.length) {
-            const sMs = (totalElapsedAtPause + currentSessionMs) - (lapTimes.reduce((a,b)=>a+b, 0));
+            const sMs = totalElapsedAtPause - (lapTimes.reduce((a,b)=>a+b, 0));
             const tEl = document.getElementById(`t-${currentIdx}`);
             if (tEl) tEl.innerText = (sMs/1000).toFixed(2);
-            totalElapsedAtPause += currentSessionMs;
             mode = "PAUSED";
         } else {
-            totalElapsedAtPause += currentSessionMs;
             const cIdx = currentIdx - sectors.length;
-            continueSectors[cIdx].time = now - lastContStart;
+            continueSectors[cIdx].time = totalElapsedAtPause - lastContStart;
             mode = "FINISHED";
         }
         renderMain();
@@ -211,9 +207,11 @@
         if (currentIdx < sectors.length) {
             mode = "RUNNING";
         } else {
-            continueSectors.push({ time: null });
-            currentIdx = sectors.length + continueSectors.length - 1;
-            lastContStart = now;
+            if (mode === "FINISHED") {
+                continueSectors.push({ time: null });
+                currentIdx = sectors.length + continueSectors.length - 1;
+                lastContStart = totalElapsedAtPause; 
+            }
             mode = "RUNNING";
         }
         startTime = now;
@@ -234,7 +232,11 @@
         else { s.resultColor = 'yellow'; }
 
         currentIdx++;
-        if (currentIdx === sectors.length) { clearInterval(timerInterval); totalElapsedAtPause = totalMs; mode = "FINISHED"; }
+        if (currentIdx === sectors.length) { 
+            clearInterval(timerInterval); 
+            totalElapsedAtPause = totalMs; 
+            mode = "FINISHED"; 
+        }
         localStorage.setItem('exam-f1-data', JSON.stringify(sectors));
         renderMain();
     }
@@ -261,7 +263,7 @@
                 }
             } else {
                 const cIdx = currentIdx - sectors.length;
-                const cMs = now - lastContStart;
+                const cMs = totalMs - lastContStart;
                 const ctEl = document.getElementById(`ct-${cIdx}`);
                 if (ctEl) ctEl.innerText = (cMs/1000).toFixed(2);
             }
@@ -278,13 +280,7 @@
     }
 
     function openConfig() { document.getElementById('main-screen').style.display='none'; document.getElementById('config-screen').style.display='flex'; renderConfig(); }
-    
-    function changeCount(n) { 
-        if (n>0 && sectors.length<20) sectors.push({target:250,best:null}); 
-        else if (n<0 && sectors.length>1) sectors.pop(); 
-        renderConfig(); 
-    }
-
+    function changeCount(n) { if (n>0 && sectors.length<20) sectors.push({target:250,best:null}); else if (n<0 && sectors.length>1) sectors.pop(); renderConfig(); }
     function renderConfig() {
         document.getElementById('display-count').innerText = sectors.length;
         const c = document.getElementById('config-items'); c.innerHTML = '';
@@ -298,12 +294,10 @@
             setTimeout(() => { p[0].scrollTop = m*40; p[1].scrollTop = sc*40; p[2].scrollTop = t*40; }, 10);
         });
     }
-
     function genPicker(si, ty, max, cur, l) {
         let h = '<div></div>'; for(let i=0;i<=max;i++) h+=`<div class="${i===cur?'active':''}" data-val="${i}">${i.toString().padStart(2,'0')}</div>`; h+='<div></div>';
         return `<div style="text-align:center;"><label style="font-size:0.5rem;color:#555;">${l}</label><div class="f1-picker" onscroll="onPickerScroll(this,${si},'${ty}')">${h}</div></div>`;
     }
-
     function onPickerScroll(el, si, ty) {
         const idx = Math.round(el.scrollTop/40);
         const ch = el.querySelectorAll('div'); ch.forEach((c,i)=>c.className=(i===idx+1)?'active':'');
@@ -311,13 +305,7 @@
         if(ty==='m') m=idx; if(ty==='s') s=idx; if(ty==='t') t=idx;
         sectors[si].target = (m*600)+(s*10)+t;
     }
-
-    document.getElementById('btn-save').onclick = () => { 
-        localStorage.setItem('exam-f1-data', JSON.stringify(sectors)); 
-        document.getElementById('config-screen').style.display='none'; 
-        document.getElementById('main-screen').style.display='flex'; 
-        renderMain(); 
-    };
+    document.getElementById('btn-save').onclick = () => { localStorage.setItem('exam-f1-data', JSON.stringify(sectors)); document.getElementById('config-screen').style.display='none'; document.getElementById('main-screen').style.display='flex'; renderMain(); };
 
     renderMain();
 </script>
