@@ -3,69 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>F1 Pro Stopwatch v18</title>
+    <title>ExamStopwatch-F1</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --f1-black: #050505; --f1-card-bg: #15151e; --f1-red: #e10600; --f1-white: #ffffff;
-            --status-purple: #b620e0; --status-green: #00d21e; --status-yellow: #fff200; 
+            --status-purple: #b620e0; --status-green: #00d21e; --status-yellow: #fff200;
+            --cont-bg: #1a1a2e; --cont-line: #007bff;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--f1-black); color: var(--f1-white); font-family: 'Orbitron', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+        body { background-color: var(--f1-black); color: var(--f1-white); font-family: 'Orbitron', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; transition: background 0.5s ease; }
+        
         #main-screen { width: 100%; max-width: 600px; display: flex; flex-direction: column; height: 100%; }
 
-        .header-area { position: sticky; top: 0; z-index: 100; background: var(--f1-black); padding: 15px; }
-        .timer-display { text-align: center; background: #000; border-radius: 10px; padding: 15px; border-left: 5px solid var(--f1-red); }
+        /* タイマー表示 */
+        .header-area { position: sticky; top: 0; z-index: 100; background: inherit; padding: 15px; }
+        .timer-display { text-align: center; background: rgba(0,0,0,0.8); border-radius: 10px; padding: 15px; border-left: 5px solid var(--f1-red); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         #main-timer { font-size: clamp(2.5rem, 8vw, 3.5rem); font-family: 'Roboto Mono'; font-weight: 700; font-variant-numeric: tabular-nums; }
         #main-timer span { color: var(--f1-red); }
 
+        /* リストエリア */
         .scroll-area { flex: 1; overflow-y: auto; padding: 0 15px; scroll-behavior: smooth; }
         .sector-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 60vh; }
         
         .sector-row { 
             display: grid; grid-template-columns: 60px 1.2fr 1fr 1fr; align-items: center; 
             background: var(--f1-card-bg); height: 85px; padding: 0 12px; border-radius: 4px; gap: 10px; 
-            border-left: 4px solid #333; transition: all 0.2s;
+            border-left: 4px solid #333; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        /* 通常の過去行は薄くする */
         .row-past { opacity: 0.4; }
-        /* FINISHED時は全行の透明度を戻す */
         .mode-finished .sector-row { opacity: 1 !important; }
-        
-        .row-active { border-left-color: var(--f1-red) !important; background: #1f1f2a; border-left-width: 8px; transform: scale(1.02); z-index: 10; opacity: 1 !important; }
+        .row-active { border-left-color: var(--f1-red) !important; background: #1f1f2a; border-left-width: 8px; transform: scale(1.02); z-index: 10; opacity: 1 !important; box-shadow: 0 0 20px rgba(225,6,0,0.2); }
+
+        /* CONTINUEセクター配色 */
+        .row-cont { background: var(--cont-bg); border-left-color: #444; }
+        .row-cont.row-active { border-left-color: var(--cont-line) !important; box-shadow: 0 0 20px rgba(0,123,255,0.2); }
 
         .s-name { font-weight: bold; font-size: 0.8rem; color: #888; }
         .s-box { display: flex; flex-direction: column; }
         .s-label { font-size: 0.55rem; color: #666; text-transform: uppercase; }
         .s-value { font-family: 'Roboto Mono'; font-size: 1.1rem; font-weight: bold; }
-        .target-val { font-family: 'Roboto Mono'; font-size: 1rem; font-weight: bold; color: #aaa; }
+        .target-val { font-family: 'Roboto Mono'; font-size: 0.95rem; font-weight: bold; color: #aaa; }
         
         .s-delta-box { text-align: right; line-height: 1.2; }
         .d-tg { font-family: 'Roboto Mono'; font-size: 1.1rem; font-weight: bold; }
         .delta-plus { color: var(--f1-red); }
         .delta-minus { color: var(--status-green); }
 
-        .row-purple { background: var(--status-purple) !important; color: #fff; }
-        .row-green  { background: var(--status-green) !important; color: #000; }
+        /* アニメーション色 */
+        .row-purple { background: var(--status-purple) !important; color: #fff; animation: flash-p 0.5s; }
+        .row-green  { background: var(--status-green) !important; color: #000; animation: flash-g 0.5s; }
         .row-yellow { background: var(--status-yellow) !important; color: #000; }
 
-        .footer-area { background: var(--f1-black); padding: 10px 15px 30px 15px; border-top: 1px solid #222; }
+        @keyframes flash-p { 0% { background: #fff; } 100% { background: var(--status-purple); } }
+        @keyframes flash-g { 0% { background: #fff; } 100% { background: var(--status-green); } }
+
+        /* フッター・ボタン */
+        .footer-area { background: rgba(0,0,0,0.8); padding: 10px 15px 30px 15px; border-top: 1px solid #222; }
         .btn-container { display: flex; justify-content: space-around; gap: 10px; }
-        .f1-btn { min-width: 80px; height: 80px; border-radius: 50%; border: none; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; }
+        .f1-btn { min-width: 80px; height: 80px; border-radius: 50%; border: none; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .btn-start { background: var(--f1-red); color: white; }
         .btn-split { background: var(--f1-white); color: black; }
         .btn-config { background: #333; color: white; font-size: 1.5rem; }
         .btn-reset { background: #444; color: white; font-size: 0.7rem; }
 
+        /* 設定画面 */
         #config-screen { display: none; width: 100%; max-width: 500px; padding: 20px; flex-direction: column; height: 100vh; overflow-y: auto; background: var(--f1-black); }
-        .config-card { background: var(--f1-card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        .count-ctrl-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: #000; padding: 10px; border-radius: 10px; }
-        .huge-btn { width: 50px; height: 50px; border-radius: 10px; border: none; background: #333; color: white; font-size: 1.5rem; cursor: pointer; }
-        .picker-group { display: flex; justify-content: center; align-items: center; gap: 5px; margin: 10px 0; }
+        .theme-selector { display: flex; gap: 10px; margin-top: 10px; justify-content: center; }
+        .theme-dot { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
         .f1-picker { height: 120px; width: 55px; overflow-y: scroll; scroll-snap-type: y mandatory; background: #000; border-radius: 8px; border: 1px solid #444; scrollbar-width: none; }
+        .f1-picker::-webkit-scrollbar { display: none; }
         .f1-picker div { height: 40px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-family: 'Roboto Mono'; font-size: 1.2rem; color: #444; }
         .f1-picker div.active { color: var(--f1-white); font-size: 1.5rem; font-weight: bold; }
-        .save-btn { width: 100%; padding: 20px; border-radius: 10px; border: none; background: var(--f1-white); font-family: 'Orbitron'; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; }
+
+        .total-summary { text-align: center; padding: 15px; margin-top: 10px; background: rgba(0,210,30,0.1); border-radius: 8px; font-weight: bold; color: var(--status-green); border: 1px solid var(--status-green); font-size: 1.2rem; }
     </style>
 </head>
 <body>
@@ -76,38 +87,55 @@
     </div>
     <div class="scroll-area" id="scroll-container">
         <div class="sector-list" id="sector-list"></div>
+        <div id="summary-area"></div>
     </div>
     <div class="footer-area"><div class="btn-container" id="btn-area"></div></div>
 </div>
 
 <div id="config-screen">
-    <div class="config-card">
-        <div class="count-ctrl-container">
-            <button class="huge-btn" onclick="changeCount(-1)">-</button>
-            <div style="text-align: center;"><p style="font-size: 0.6rem; color:#888;">SECTORS</p><span id="display-count" style="font-size:1.5rem; color:var(--f1-red); font-weight:bold;">3</span></div>
-            <button class="huge-btn" onclick="changeCount(1)">+</button>
+    <div class="config-card" style="background: var(--f1-card-bg); padding: 20px; border-radius: 12px;">
+        <h2 style="font-size: 0.9rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px;">ExamStopwatch-F1 CONFIG</h2>
+        <p style="font-size: 0.7rem; color: #888; text-align: center; margin-bottom: 10px;">THEME COLOR</p>
+        <div class="theme-selector">
+            <div class="theme-dot" style="background:#050505" onclick="setTheme('#050505')"></div>
+            <div class="theme-dot" style="background:#0a0a20" onclick="setTheme('#0a0a20')"></div>
+            <div class="theme-dot" style="background:#101810" onclick="setTheme('#101810')"></div>
+            <div class="theme-dot" style="background:#1a0a0a" onclick="setTheme('#1a0a0a')"></div>
         </div>
-        <div id="config-items"></div>
-        <button class="save-btn" id="btn-save">SAVE & CLOSE</button>
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #333;">
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; border-radius:8px;">
+            <button onclick="changeCount(-1)" style="width:40px; height:40px; background:#333; color:#fff; border:none; border-radius:5px; font-size:1.5rem;">-</button>
+            <div style="text-align:center;"><p style="font-size:0.5rem; color:#888;">SECTORS</p><span id="display-count" style="font-size:1.4rem; color:var(--f1-red); font-weight:bold;">3</span></div>
+            <button onclick="changeCount(1)" style="width:40px; height:40px; background:#333; color:#fff; border:none; border-radius:5px; font-size:1.5rem;">+</button>
+        </div>
+        <div id="config-items" style="margin-top:20px;"></div>
+        <button id="btn-save" style="width:100%; padding:18px; margin-top:20px; border-radius:8px; border:none; background:#fff; font-family:'Orbitron'; font-weight:bold; font-size:1rem;">SAVE & CLOSE</button>
     </div>
 </div>
 
 <script>
-    let sectors = JSON.parse(localStorage.getItem('f1-v18-data')) || [{target: 250, best: null}, {target: 250, best: null}, {target: 250, best: null}];
+    let sectors = JSON.parse(localStorage.getItem('exam-f1-data')) || [{target: 250, best: null}, {target: 250, best: null}, {target: 250, best: null}];
+    let currentTheme = localStorage.getItem('exam-f1-theme') || '#050505';
     let continueSectors = [];
     let startTime, timerInterval, currentIdx = 0, lapTimes = [], mode = "READY", totalElapsedAtPause = 0, lastContStart = 0;
 
+    function setTheme(color) { currentTheme = color; document.body.style.backgroundColor = color; localStorage.setItem('exam-f1-theme', color); }
+
     function renderMain() {
-        const list = document.getElementById('sector-list'); 
-        list.innerHTML = '';
-        
-        // FINISHED状態ならクラスを付与して全表示にする
-        const scContainer = document.getElementById('main-screen');
-        if (mode === "FINISHED") scContainer.classList.add('mode-finished');
-        else scContainer.classList.remove('mode-finished');
+        const list = document.getElementById('sector-list'); list.innerHTML = '';
+        const summary = document.getElementById('summary-area'); summary.innerHTML = '';
+        document.body.style.backgroundColor = currentTheme;
+
+        if (mode === "FINISHED") {
+            document.getElementById('main-screen').classList.add('mode-finished');
+            const total = lapTimes.reduce((a,b)=>a+b, 0);
+            summary.innerHTML = `<div class="total-summary">TOTAL TIME: ${(total/1000).toFixed(2)}s</div>`;
+        } else {
+            document.getElementById('main-screen').classList.remove('mode-finished');
+        }
 
         sectors.forEach((s, i) => {
-            const row = createRow(`S${i+1}`, s.target, s.best, i, false);
+            const row = createRow(`Q${i+1}`, s.target, s.best, i, false);
             if (mode !== "READY") {
                 if (i < currentIdx) row.classList.add('row-past');
                 if (i === currentIdx && mode !== "FINISHED") row.classList.add('row-active');
@@ -118,26 +146,21 @@
 
         continueSectors.forEach((cs, i) => {
             const row = createRow(`CONT ${i+1}`, null, null, i, true);
+            row.classList.add('row-cont');
             const absIdx = sectors.length + i;
             if (absIdx < currentIdx) row.classList.add('row-past');
             if (absIdx === currentIdx) row.classList.add('row-active');
             if (cs.time !== null) applySectorStats(row, i, cs.time, null, true);
             list.appendChild(row);
         });
-
-        renderButtons();
-        scrollToLatest();
+        renderButtons(); scrollToLatest();
     }
 
     function createRow(name, target, best, idx, isCont) {
         const row = document.createElement('div'); row.className = 'sector-row';
         const tDisp = target ? (target/10).toFixed(1) : "---";
         const bDisp = best ? (best/10).toFixed(1) : "---";
-        row.innerHTML = `
-            <div class="s-name">${name}</div>
-            <div class="s-box"><span class="s-label">TIME</span><span class="s-value" id="${isCont?'ct':'t'}-${idx}">--.--</span></div>
-            <div class="s-box"><span class="s-label">BEST/TG</span><span class="target-val">${bDisp}/${tDisp}</span></div>
-            <div class="s-delta-box"><span class="s-label">DELTA</span><div class="d-tg" id="${isCont?'cd-tg':'d-tg'}-${idx}">---</div></div>`;
+        row.innerHTML = `<div class="s-name">${name}</div><div class="s-box"><span class="s-label">TIME</span><span class="s-value" id="${isCont?'ct':'t'}-${idx}">--.--</span></div><div class="s-box"><span class="s-label">BEST/TG</span><span class="target-val">${bDisp}/${tDisp}</span></div><div class="s-delta-box"><span class="s-label">DELTA</span><div class="d-tg" id="${isCont?'cd-tg':'d-tg'}-${idx}">---</div></div>`;
         return row;
     }
 
@@ -175,13 +198,9 @@
         const sc = document.getElementById('scroll-container');
         const rows = document.querySelectorAll('.sector-row');
         if (!rows[currentIdx]) return;
-        if (currentIdx < 3) {
-            sc.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            const rowHeight = 85 + 8;
-            const targetPos = (currentIdx - 1.5) * rowHeight;
-            sc.scrollTo({ top: targetPos, behavior: 'smooth' });
-        }
+        const rowHeight = 85 + 8;
+        const targetPos = currentIdx < 3 ? 0 : (currentIdx - 1.5) * rowHeight;
+        sc.scrollTo({ top: targetPos, behavior: 'smooth' });
     }
 
     function startSession() {
@@ -194,21 +213,17 @@
         clearInterval(timerInterval);
         const now = Date.now();
         const sessionMs = totalElapsedAtPause + (now - startTime);
-        
         if (currentIdx < sectors.length) {
-            // 通常セクター中
             const currentSectorMs = sessionMs - (lapTimes.reduce((a,b)=>a+b, 0));
             const tEl = document.getElementById(`t-${currentIdx}`);
             if (tEl) tEl.innerText = (currentSectorMs/1000).toFixed(2);
         } else {
-            // CONTINUEセクター中: CONTを押してからの経過時間を確定
             const cIdx = currentIdx - sectors.length;
             const contMs = now - lastContStart;
             continueSectors[cIdx].time = contMs;
             const tEl = document.getElementById(`ct-${cIdx}`);
             if (tEl) tEl.innerText = (contMs/1000).toFixed(2);
         }
-
         totalElapsedAtPause = sessionMs;
         mode = "PAUSED";
         renderMain();
@@ -216,15 +231,10 @@
 
     function resumeTimerAction() {
         const now = Date.now();
-        // CONTINUEセクター追加
         continueSectors.push({ time: null });
         currentIdx = sectors.length + continueSectors.length - 1;
-        
-        lastContStart = now; // このセクターの開始時間を記録
-        startTime = now;     // 通しタイマー用の基準
-        mode = "RUNNING";
-        runTimerLoop();
-        renderMain();
+        lastContStart = now; startTime = now; mode = "RUNNING";
+        runTimerLoop(); renderMain();
     }
 
     function recordSector() {
@@ -234,19 +244,13 @@
         lapTimes.push(sMs);
         const tenths = Math.floor(sMs / 100);
         const s = sectors[currentIdx];
-
         if (s.best === null) { s.resultColor = 'green'; s.best = tenths; }
         else if (tenths < s.best) { s.resultColor = 'purple'; s.best = tenths; }
         else if (tenths <= s.target) { s.resultColor = 'green'; }
         else { s.resultColor = 'yellow'; }
-        
         currentIdx++;
-        if (currentIdx === sectors.length) {
-            clearInterval(timerInterval);
-            totalElapsedAtPause = sessionMs;
-            mode = "FINISHED";
-        }
-        localStorage.setItem('f1-v18-data', JSON.stringify(sectors));
+        if (currentIdx === sectors.length) { clearInterval(timerInterval); totalElapsedAtPause = sessionMs; mode = "FINISHED"; }
+        localStorage.setItem('exam-f1-data', JSON.stringify(sectors));
         renderMain();
     }
 
@@ -257,13 +261,11 @@
         timerInterval = setInterval(() => {
             const now = Date.now();
             const sessionMs = totalElapsedAtPause + (now - startTime);
-            
-            // メインタイマー (常に通し時間)
-            const m = Math.floor(sessionMs/60000), s = Math.floor((sessionMs%60000)/1000), ms = Math.floor((sessionMs%1000)/10);
-            document.getElementById('main-timer').innerHTML = `${m.toString().padStart(2,'0')}<span>:</span>${s.toString().padStart(2,'0')}<span>.</span>${ms.toString().padStart(2,'0')}`;
-            
+            const m = Math.floor(sessionMs/60000), s = Math.floor((sessionMs%60000)/1000), ms = Math.floor((totalMs%1000)/10);
+            // ※ totalMs変数が未定義箇所があったためsessionMsに統一修正
+            const msDisplay = Math.floor((sessionMs%1000)/10);
+            document.getElementById('main-timer').innerHTML = `${m.toString().padStart(2,'0')}<span>:</span>${s.toString().padStart(2,'0')}<span>.</span>${msDisplay.toString().padStart(2,'0')}`;
             if (currentIdx < sectors.length) {
-                // 通常セクターのリアルタイム表示
                 const currentSectorMs = sessionMs - (lapTimes.reduce((a,b)=>a+b, 0));
                 const tEl = document.getElementById(`t-${currentIdx}`);
                 if (tEl) tEl.innerText = (currentSectorMs/1000).toFixed(2);
@@ -274,7 +276,6 @@
                     dEl.className = 'd-tg ' + (diff > 0 ? 'delta-plus' : 'delta-minus');
                 }
             } else {
-                // CONTINUEセクターのリアルタイム表示 (CONTを押してからの時間)
                 const contMs = now - lastContStart;
                 const cIdx = currentIdx - sectors.length;
                 const tEl = document.getElementById(`ct-${cIdx}`);
@@ -283,7 +284,6 @@
         }, 50);
     }
 
-    // --- 設定画面 ---
     function openConfig() { document.getElementById('main-screen').style.display='none'; document.getElementById('config-screen').style.display='flex'; renderConfig(); }
     function changeCount(n) { if (n>0 && sectors.length<20) sectors.push({target:250,best:null}); else if (n<0 && sectors.length>1) sectors.pop(); renderConfig(); }
     function renderConfig() {
@@ -293,8 +293,7 @@
             const cur = s.target;
             const m = Math.floor((cur%36000)/600), sc = Math.floor((cur%600)/10), t = cur%10;
             const d = document.createElement('div');
-            d.style.marginBottom = "15px";
-            d.innerHTML = `<p style="color:#888;font-size:0.7rem;text-align:center;">SECTOR ${i+1}</p><div class="picker-group">${genPicker(i,'m',59,m,'MIN')}${genPicker(i,'s',59,sc,'SEC')}${genPicker(i,'t',9,t,'1/10')}</div>`;
+            d.innerHTML = `<p style="color:#888;font-size:0.7rem;text-align:center;margin-top:10px;">QUESTION ${i+1}</p><div class="picker-group" style="display:flex; justify-content:center; gap:5px;">${genPicker(i,'m',59,m,'MIN')}${genPicker(i,'s',59,sc,'SEC')}${genPicker(i,'t',9,t,'1/10')}</div>`;
             c.appendChild(d);
             const p = d.querySelectorAll('.f1-picker');
             setTimeout(() => { p[0].scrollTop = m*40; p[1].scrollTop = sc*40; p[2].scrollTop = t*40; }, 10);
@@ -302,7 +301,7 @@
     }
     function genPicker(si, ty, max, cur, l) {
         let h = '<div></div>'; for(let i=0;i<=max;i++) h+=`<div class="${i===cur?'active':''}" data-val="${i}">${i.toString().padStart(2,'0')}</div>`; h+='<div></div>';
-        return `<div class="picker-wrap"><label style="font-size:0.5rem;color:#555;">${l}</label><div class="f1-picker" onscroll="onPickerScroll(this,${si},'${ty}')">${h}</div></div>`;
+        return `<div style="text-align:center;"><label style="font-size:0.5rem;color:#555;">${l}</label><div class="f1-picker" onscroll="onPickerScroll(this,${si},'${ty}')">${h}</div></div>`;
     }
     function onPickerScroll(el, si, ty) {
         const idx = Math.round(el.scrollTop/40);
@@ -311,7 +310,7 @@
         if(ty==='m') m=idx; if(ty==='s') s=idx; if(ty==='t') t=idx;
         sectors[si].target = (m*600)+(s*10)+t;
     }
-    document.getElementById('btn-save').onclick = () => { localStorage.setItem('f1-v18-data', JSON.stringify(sectors)); document.getElementById('config-screen').style.display='none'; document.getElementById('main-screen').style.display='flex'; renderMain(); };
+    document.getElementById('btn-save').onclick = () => { localStorage.setItem('exam-f1-data', JSON.stringify(sectors)); document.getElementById('config-screen').style.display='none'; document.getElementById('main-screen').style.display='flex'; renderMain(); };
 
     renderMain();
 </script>
