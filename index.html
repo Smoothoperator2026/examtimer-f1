@@ -36,7 +36,6 @@
             border-left: 4px solid #333; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .row-past { opacity: 0.4; }
-        /* リザルトモード：すべてのセクターの不透明度を1にする */
         body.mode-finished .sector-row { opacity: 1 !important; }
         .row-active { border-left-color: var(--f1-red) !important; background: #1f1f2a; border-left-width: 8px; transform: scale(1.02); z-index: 10; opacity: 1 !important; box-shadow: 0 0 20px rgba(225,6,0,0.2); }
 
@@ -191,15 +190,17 @@
         totalElapsedAtPause += currentSessionMs;
 
         if (currentIdx < sectors.length) {
+            // 現在のQセクターの途中経過を計算
             const sMs = totalElapsedAtPause - (lapTimes.reduce((a,b)=>a+b, 0));
             const tEl = document.getElementById(`t-${currentIdx}`);
+            // Qセクター内に仮のタイムを表示
             if (tEl) tEl.innerText = (sMs/1000).toFixed(2);
             mode = "PAUSED";
         } else {
             const cIdx = currentIdx - sectors.length;
             continueSectors[cIdx].time = totalElapsedAtPause - lastContStart;
             mode = "FINISHED";
-            document.body.classList.add('mode-finished'); // 全終了時にリザルトモード適用
+            document.body.classList.add('mode-finished');
         }
         renderMain();
     }
@@ -215,7 +216,7 @@
                 lastContStart = totalElapsedAtPause; 
             }
             mode = "RUNNING";
-            document.body.classList.remove('mode-finished'); // CONT再開時はリザルトモード解除
+            document.body.classList.remove('mode-finished');
         }
         startTime = now;
         runTimerLoop();
@@ -239,7 +240,7 @@
             clearInterval(timerInterval); 
             totalElapsedAtPause = totalMs; 
             mode = "FINISHED"; 
-            document.body.classList.add('mode-finished'); // 全Q終了時にリザルトモード適用
+            document.body.classList.add('mode-finished');
         }
         localStorage.setItem('exam-f1-data', JSON.stringify(sectors));
         renderMain();
@@ -252,7 +253,7 @@
         lapTimes = []; 
         totalElapsedAtPause = 0; 
         continueSectors = []; 
-        document.body.classList.remove('mode-finished'); // リセット時に解除
+        document.body.classList.remove('mode-finished');
         renderMain(); 
         document.getElementById('main-timer').innerHTML = "00<span>:</span>00<span>.</span>00"; 
     }
