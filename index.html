@@ -1,305 +1,257 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>F1 Pro Stopwatch</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>F1 Pro Stopwatch v11</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --f1-black: #050505; --f1-card-bg: #15151e; --f1-red: #e10600; --f1-white: #ffffff;
+            --status-purple: #b620e0; --status-green: #00d21e; --status-yellow: #fff200; 
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--f1-black); color: var(--f1-white); font-family: 'Orbitron', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+        #main-screen { width: 100%; max-width: 500px; display: flex; flex-direction: column; height: 100%; }
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+        /* ヘッダー */
+        .header-area { position: sticky; top: 0; z-index: 100; background: var(--f1-black); padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
+        .timer-display { text-align: center; background: #000; border-radius: 10px; padding: 15px; border-left: 5px solid var(--f1-red); }
+        #main-timer { font-size: 3.2rem; font-family: 'Roboto Mono'; font-weight: 700; font-variant-numeric: tabular-nums; }
+        #main-timer span { color: var(--f1-red); }
 
-<style>
+        /* スクロールエリア */
+        .scroll-area { flex: 1; overflow-y: auto; padding: 0 15px; scroll-behavior: smooth; }
+        .sector-list { display: flex; flex-direction: column; gap: 8px; }
+        .sector-row { display: grid; grid-template-columns: 80px 1fr 1fr 1fr; align-items: center; background: var(--f1-card-bg); padding: 12px 10px; border-radius: 4px; gap: 8px; border-left: 4px solid #333; transition: 0.3s; }
+        
+        /* 現在計測中のセクター強調 */
+        .row-active { border-left-color: var(--f1-red); background: #1f1f2a; border-left-width: 8px; }
 
-:root{
---f1-black:#050505;
---f1-card-bg:#15151e;
---f1-red:#e10600;
---f1-white:#fff;
---status-purple:#b620e0;
---status-green:#00d21e;
---status-yellow:#fff200;
-}
+        .s-name { font-weight: bold; font-size: 0.9rem; color: #888; }
+        .s-box { display: flex; flex-direction: column; }
+        .s-label { font-size: 0.55rem; color: #555; text-transform: uppercase; }
+        .s-value { font-family: 'Roboto Mono'; font-size: 1rem; font-weight: bold; }
+        .s-delta-box { text-align: right; line-height: 1.2; }
+        .d-tg { font-family: 'Roboto Mono'; font-size: 0.85rem; font-weight: bold; }
+        
+        .row-purple { background: var(--status-purple); color: #fff; }
+        .row-green  { background: var(--status-green); color: #000; }
+        .row-yellow { background: var(--status-yellow); color: #000; }
+        
+        .spacer { height: 75vh; }
 
-body{
-background:var(--f1-black);
-color:white;
-font-family:Orbitron;
-margin:0;
-height:100vh;
-overflow:hidden;
-display:flex;
-justify-content:center;
-}
+        /* フッターボタン */
+        .footer-area { background: var(--f1-black); padding: 10px 15px 30px 15px; border-top: 1px solid #222; z-index: 100; }
+        .btn-container { display: flex; justify-content: space-around; gap: 10px; }
+        .f1-btn { min-width: 85px; height: 85px; border-radius: 50%; border: none; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-start { background: var(--f1-red); color: white; }
+        .btn-split { background: var(--f1-white); color: black; }
+        .btn-config { background: #333; color: white; font-size: 1.5rem; }
+        .btn-reset { background: #444; color: white; font-size: 0.7rem; }
 
-#main-screen{
-width:100%;
-max-width:500px;
-display:flex;
-flex-direction:column;
-height:100%;
-}
+        /* 設定画面 */
+        #config-screen { display: none; width: 100%; max-width: 500px; padding: 20px; flex-direction: column; height: 100vh; overflow-y: auto; }
+        .config-card { background: var(--f1-card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        
+        /* セクター数増減ボタンの大型化 */
+        .count-ctrl-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: #000; padding: 10px; border-radius: 10px; }
+        .huge-btn { width: 60px; height: 60px; border-radius: 10px; border: none; background: #333; color: white; font-size: 2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .huge-btn:active { background: var(--f1-red); }
+        #display-count { font-size: 1.5rem; font-family: 'Roboto Mono'; color: var(--f1-red); font-weight: bold; }
 
-.header-area{
-padding:15px;
-background:black;
-}
-
-.timer-display{
-text-align:center;
-font-size:3rem;
-font-family:"Roboto Mono";
-}
-
-.scroll-area{
-flex:1;
-overflow-y:auto;
-padding:10px;
-}
-
-.sector-row{
-display:grid;
-grid-template-columns:80px 1fr 1fr 1fr;
-background:#15151e;
-margin-bottom:6px;
-padding:10px;
-border-radius:4px;
-}
-
-.row-purple{background:var(--status-purple)}
-.row-green{background:var(--status-green);color:black}
-.row-yellow{background:var(--status-yellow);color:black}
-
-.footer-area{
-padding:10px;
-}
-
-.f1-btn{
-width:85px;
-height:85px;
-border-radius:50%;
-border:none;
-font-family:Orbitron;
-font-weight:bold;
-}
-
-.btn-start{background:#e10600;color:white}
-.btn-split{background:white;color:black}
-
-.count-btn{
-width:60px;
-height:60px;
-font-size:2rem;
-border-radius:12px;
-border:none;
-background:#333;
-color:white;
-}
-
-</style>
+        .picker-group { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 15px 0; }
+        .f1-picker { height: 150px; width: 60px; overflow-y: scroll; scroll-snap-type: y mandatory; background: #000; border-radius: 8px; border: 1px solid #444; scrollbar-width: none; }
+        .f1-picker::-webkit-scrollbar { display: none; }
+        .f1-picker div { height: 50px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-family: 'Roboto Mono'; font-size: 1.4rem; color: #444; }
+        .f1-picker div.active { color: var(--f1-white); font-size: 1.8rem; font-weight: bold; }
+        .save-btn { width: 100%; padding: 20px; border-radius: 10px; border: none; background: var(--f1-white); font-family: 'Orbitron'; font-weight: bold; color: black; font-size: 1.1rem; }
+    </style>
 </head>
-
 <body>
 
 <div id="main-screen">
-
-<div class="header-area">
-<div class="timer-display" id="main-timer">00:00.00</div>
+    <div class="header-area">
+        <div class="timer-display"><div id="main-timer">00<span>:</span>00<span>.</span>00</div></div>
+    </div>
+    <div class="scroll-area" id="scroll-container">
+        <div class="sector-list" id="sector-list"></div>
+        <div class="spacer"></div>
+    </div>
+    <div class="footer-area"><div class="btn-container" id="btn-area"></div></div>
 </div>
 
-<div class="scroll-area" id="scroll-container">
-<div id="sector-list"></div>
-</div>
-
-<div class="footer-area">
-<div id="btn-area"></div>
-</div>
-
+<div id="config-screen">
+    <div class="config-card">
+        <div class="count-ctrl-container">
+            <button class="huge-btn" onclick="changeCount(-1)">-</button>
+            <div style="text-align: center;"><p style="font-size: 0.6rem; color:#888;">SECTORS</p><span id="display-count">3</span></div>
+            <button class="huge-btn" onclick="changeCount(1)">+</button>
+        </div>
+        <div id="config-items"></div>
+        <button class="save-btn" id="btn-save">SAVE & CLOSE</button>
+    </div>
 </div>
 
 <script>
-
-let sectors = JSON.parse(localStorage.getItem('f1-data')) || [
-{target:250,best:null},
-{target:250,best:null},
-{target:250,best:null}
-];
-
-let continueSectors=[];
-let mode="READY";
-
-let startTime;
-let timerInterval;
-
-let lapTimes=[];
-let currentIdx=0;
-
-function renderMain(){
-
-const list=document.getElementById("sector-list");
-list.innerHTML="";
-
-sectors.forEach((s,i)=>{
-
-const row=document.createElement("div");
-row.className="sector-row";
-row.id="row-"+i;
-
-row.innerHTML=`
-<div>S${i+1}</div>
-<div id="t-${i}">--</div>
-<div>${s.best??"--"}</div>
-<div>${s.target}</div>
-`;
-
-list.appendChild(row);
-
-});
-
-continueSectors.forEach((c,i)=>{
-
-const row=document.createElement("div");
-row.className="sector-row";
-row.innerHTML=`CONT ${i+1} ${c.time??"--"}`;
-
-list.appendChild(row);
-
-});
-
-renderButtons();
-
-}
-
-function renderButtons(){
-
-const area=document.getElementById("btn-area");
-area.innerHTML="";
-
-if(mode==="READY"){
-
-area.appendChild(btn("START","btn-start",startSession));
-
-}
-
-else if(mode==="RUNNING"){
-
-area.appendChild(btn("STOP","btn-start",stopTimer));
-area.appendChild(btn("SECTOR","btn-split",recordSector));
-
-}
-
-}
-
-function btn(text,cls,fn){
-
-const b=document.createElement("button");
-b.className="f1-btn "+cls;
-b.innerText=text;
-b.onclick=fn;
-return b;
-
-}
-
-function startSession(){
-
-mode="RUNNING";
-currentIdx=0;
-lapTimes=[];
-continueSectors=[];
-
-startTime=Date.now();
-
-runTimer();
-
-renderMain();
-
-}
-
-function stopTimer(){
-
-clearInterval(timerInterval);
-
-mode="READY";
-
-renderMain();
-
-}
-
-function runTimer(){
-
-timerInterval=setInterval(()=>{
-
-const d=Date.now()-startTime;
-
-const m=Math.floor(d/60000);
-const s=Math.floor((d%60000)/1000);
-const ms=Math.floor((d%1000)/10);
-
-document.getElementById("main-timer").innerText=
-`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}.${String(ms).padStart(2,"0")}`;
-
-},50);
-
-}
-
-function recordSector(){
-
-const total=Date.now()-startTime;
-
-const sectorTime=total-(lapTimes.reduce((a,b)=>a+b,0));
-
-lapTimes.push(sectorTime);
-
-const row=document.getElementById("t-"+currentIdx);
-row.innerText=(sectorTime/1000).toFixed(2);
-
-currentIdx++;
-
-renderMain();
-
-setTimeout(scrollToLatest,50);
-
-}
-
-function scrollToLatest(){
-
-const sc=document.getElementById("scroll-container");
-const rows=document.querySelectorAll(".sector-row");
-
-if(rows.length===0)return;
-
-const rowHeight=rows[0].offsetHeight;
-
-const visibleCount=Math.floor(sc.clientHeight/rowHeight);
-
-let idx=currentIdx;
-
-if(idx<=visibleCount)return;
-
-const targetIndex=idx-2;
-
-const targetRow=rows[targetIndex];
-
-if(!targetRow)return;
-
-let ratio=0.35;
-
-const width=window.innerWidth;
-
-if(width<500)ratio=0.45;
-else if(width<900)ratio=0.40;
-else ratio=0.30;
-
-const pos=targetRow.offsetTop-(sc.clientHeight*ratio);
-
-sc.scrollTo({
-top:Math.max(0,pos),
-behavior:"smooth"
-});
-
-}
-
-renderMain();
-
+    let sectors = JSON.parse(localStorage.getItem('f1-v5-data')) || [{target: 250, best: null}, {target: 250, best: null}, {target: 250, best: null}];
+    let continueSectors = [];
+    let isRunning = false, startTime, timerInterval, currentIdx = 0, lapTimes = [], mode = "READY", pausedTime = 0;
+
+    function renderMain() {
+        const list = document.getElementById('sector-list'); list.innerHTML = '';
+        sectors.forEach((s, i) => {
+            const row = createRow(`S${i+1}`, s.target, s.best, i, false);
+            if (mode === "RUNNING" && i === currentIdx) row.classList.add('row-active');
+            if (lapTimes[i] !== undefined) applySectorStats(row, i, lapTimes[i], s, false);
+            list.appendChild(row);
+        });
+        continueSectors.forEach((cs, i) => {
+            const row = createRow(`CONT ${i+1}`, null, null, i, true);
+            if (cs.time !== null) applySectorStats(row, i, cs.time, null, true);
+            list.appendChild(row);
+        });
+        renderButtons();
+    }
+
+    function createRow(name, target, best, idx, isCont) {
+        const row = document.createElement('div'); row.className = 'sector-row'; row.id = isCont ? `crow-${idx}` : `row-${idx}`;
+        const tDisp = target ? (target/10).toFixed(1) : "---";
+        const bDisp = best ? (best/10).toFixed(1) : "---";
+        row.innerHTML = `<div class="s-name">${name}</div><div class="s-box"><span class="s-label">TIME</span><span class="s-value" id="${isCont?'ct':'t'}-${idx}">--.--</span></div><div class="s-box"><span class="s-label">PB/TG</span><span class="s-value" style="color:#666;font-size:0.75rem;">${bDisp}/${tDisp}</span></div><div class="s-delta-box"><span class="d-tg" id="${isCont?'cd-tg':'d-tg'}-${idx}">---</span></div>`;
+        return row;
+    }
+
+    function applySectorStats(rowEl, idx, ms, sObj, isCont) {
+        const tEl = rowEl.querySelector(isCont?`#ct-${idx}`:`#t-${idx}`);
+        const tgEl = rowEl.querySelector(isCont?`#cd-tg-${idx}`:`#d-tg-${idx}`);
+        tEl.innerText = (ms/1000).toFixed(2);
+        const tenths = Math.floor(ms / 100);
+        if (!isCont && sObj) {
+            const diff = (tenths - sObj.target) / 10;
+            tgEl.innerText = (diff > 0 ? "+" : "") + diff.toFixed(1);
+            if (sObj.resultColor) rowEl.classList.add(`row-${sObj.resultColor}`);
+        } else { rowEl.classList.add('row-green'); }
+    }
+
+    function renderButtons() {
+        const area = document.getElementById('btn-area'); area.innerHTML = '';
+        if (mode === "READY") { area.appendChild(createBtn("btn-config", "⚙️", openConfig)); area.appendChild(createBtn("btn-start", "START", startSession)); }
+        else if (mode === "RUNNING" || mode === "CONT_RUNNING") { area.appendChild(createBtn("btn-start", "STOP", stopTimerAction)); area.appendChild(createBtn("btn-split", "LAP", recordSector)); }
+        else if (mode === "PAUSED" || mode === "FINISHED" || mode === "CONT_STOPPED") { area.appendChild(createBtn("btn-reset", "RESET", resetAll)); area.appendChild(createBtn("btn-start", "CONT", startContinue)); }
+    }
+
+    function createBtn(c, t, f) { const b = document.createElement('button'); b.className=`f1-btn ${c}`; b.innerText=t; b.onclick=f; return b; }
+
+    // --- 改良版スクロールロジック ---
+    function scrollToLatest() {
+        const sc = document.getElementById('scroll-container');
+        const rows = document.querySelectorAll('.sector-row');
+        
+        // 1〜3セクター目まではスクロールしない
+        if (currentIdx < 3 && mode === "RUNNING") {
+            sc.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // ターゲットとなる行（現在計測中、または最後に記録した行）
+        const targetIdx = (mode === "RUNNING") ? currentIdx : rows.length - 1;
+        const targetRow = rows[targetIdx];
+        if (!targetRow) return;
+
+        // デバイス判定とオフセット設定
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const viewHeight = sc.clientHeight;
+        
+        let offset;
+        if (isMobile) {
+            // スマホ：画面中央付近に現在のセクターを配置（過去2つが見える）
+            offset = viewHeight * 0.5; 
+        } else {
+            // PC/タブレット：画面のやや上方に配置
+            offset = viewHeight * 0.3;
+        }
+
+        const targetPos = targetRow.offsetTop - offset;
+        sc.scrollTo({ top: Math.max(0, targetPos), behavior: 'smooth' });
+    }
+
+    function startSession() {
+        mode = "RUNNING"; startTime = Date.now(); pausedTime = 0; currentIdx = 0; lapTimes = []; continueSectors = [];
+        sectors.forEach(s => { s.best_at_start = s.best; s.resultColor = null; });
+        renderMain(); runTimerLoop();
+    }
+
+    function stopTimerAction() {
+        clearInterval(timerInterval);
+        pausedTime = Date.now() - startTime;
+        mode = (mode === "RUNNING") ? "PAUSED" : "CONT_STOPPED";
+        if (mode === "CONT_STOPPED") { continueSectors[continueSectors.length - 1].time = pausedTime; renderMain(); scrollToLatest(); }
+        else renderButtons();
+    }
+
+    function recordSector() {
+        if (currentIdx < sectors.length) {
+            const totalMs = Date.now() - startTime;
+            const sMs = totalMs - lapTimes.reduce((a,b)=>a+b, 0);
+            lapTimes.push(sMs);
+            const tenths = Math.floor(sMs / 100);
+            const s = sectors[currentIdx];
+            if (s.best === null || tenths < s.best) { s.resultColor = 'purple'; s.best = tenths; }
+            else if (tenths <= s.target) { s.resultColor = 'green'; }
+            else { s.resultColor = 'yellow'; }
+            currentIdx++;
+            if (currentIdx === sectors.length) { clearInterval(timerInterval); mode = "FINISHED"; }
+            renderMain();
+            localStorage.setItem('f1-v5-data', JSON.stringify(sectors));
+            scrollToLatest();
+        }
+    }
+
+    function startContinue() {
+        mode = "CONT_RUNNING"; continueSectors.push({ time: null });
+        renderMain(); startTime = Date.now(); runTimerLoop();
+        setTimeout(scrollToLatest, 100);
+    }
+
+    function resetAll() { clearInterval(timerInterval); mode = "READY"; continueSectors = []; lapTimes = []; renderMain(); document.getElementById('main-timer').innerHTML = "00<span>:</span>00<span>.</span>00"; }
+
+    function runTimerLoop() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            const d = Date.now() - startTime;
+            const m = Math.floor(d/60000), s = Math.floor((d%60000)/1000), ms = Math.floor((d%1000)/10);
+            document.getElementById('main-timer').innerHTML = `${m.toString().padStart(2,'0')}<span>:</span>${s.toString().padStart(2,'0')}<span>.</span>${ms.toString().padStart(2,'0')}`;
+        }, 50);
+    }
+
+    function openConfig() { document.getElementById('main-screen').style.display='none'; document.getElementById('config-screen').style.display='flex'; renderConfig(); }
+    function changeCount(n) { if (n>0 && sectors.length<20) sectors.push({target:250,best:null}); else if (n<0 && sectors.length>1) sectors.pop(); renderConfig(); }
+    function renderConfig() {
+        document.getElementById('display-count').innerText = sectors.length;
+        const c = document.getElementById('config-items'); c.innerHTML = '';
+        sectors.forEach((s, i) => {
+            const cur = s.target, m = Math.floor((cur%36000)/600), sc = Math.floor((cur%600)/10), t = cur%10;
+            const d = document.createElement('div');
+            d.innerHTML = `<p style="color:#888;font-size:0.7rem;margin-top:10px;">SECTOR ${i+1}</p><div class="picker-group">${genPicker(i,'m',59,m,'MIN')}${genPicker(i,'s',59,sc,'SEC')}${genPicker(i,'t',9,t,'1/10')}</div>`;
+            c.appendChild(d);
+        });
+    }
+    function genPicker(si, ty, max, cur, l) {
+        let h = '<div></div>'; for(let i=0;i<=max;i++) h+=`<div class="${i===cur?'active':''}" data-val="${i}">${i.toString().padStart(2,'0')}</div>`; h+='<div></div>';
+        return `<div class="picker-wrap"><label style="font-size:0.5rem;color:#555;display:block;text-align:center;">${l}</label><div class="f1-picker" onscroll="onPickerScroll(this,${si},'${ty}')">${h}</div></div>`;
+    }
+    function onPickerScroll(el, si, ty) {
+        const idx = Math.round(el.scrollTop/50);
+        const ch = el.querySelectorAll('div'); ch.forEach((c,i)=>c.className=(i===idx+1)?'active':'');
+        let cur = sectors[si].target, m = Math.floor((cur%36000)/600), s = Math.floor((cur%600)/10), t = cur%10;
+        if(ty==='m') m=idx; if(ty==='s') s=idx; if(ty==='t') t=idx;
+        sectors[si].target = (m*600)+(s*10)+t;
+    }
+    document.getElementById('btn-save').onclick = () => { localStorage.setItem('f1-v5-data', JSON.stringify(sectors)); document.getElementById('config-screen').style.display='none'; document.getElementById('main-screen').style.display='flex'; renderMain(); };
+
+    window.addEventListener('resize', scrollToLatest);
+    renderMain();
 </script>
-
 </body>
 </html>
