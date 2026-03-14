@@ -36,7 +36,8 @@
             border-left: 4px solid #333; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .row-past { opacity: 0.4; }
-        .mode-finished .sector-row { opacity: 1 !important; }
+        /* リザルトモード：すべてのセクターの不透明度を1にする */
+        body.mode-finished .sector-row { opacity: 1 !important; }
         .row-active { border-left-color: var(--f1-red) !important; background: #1f1f2a; border-left-width: 8px; transform: scale(1.02); z-index: 10; opacity: 1 !important; box-shadow: 0 0 20px rgba(225,6,0,0.2); }
 
         .row-cont { background: var(--cont-bg); border-left-color: #444; }
@@ -190,16 +191,15 @@
         totalElapsedAtPause += currentSessionMs;
 
         if (currentIdx < sectors.length) {
-            // Qの計測中の場合：その時点のタイムを表示して一時停止
             const sMs = totalElapsedAtPause - (lapTimes.reduce((a,b)=>a+b, 0));
             const tEl = document.getElementById(`t-${currentIdx}`);
             if (tEl) tEl.innerText = (sMs/1000).toFixed(2);
             mode = "PAUSED";
         } else {
-            // 全Q終了後のCONTセクター計測中の場合
             const cIdx = currentIdx - sectors.length;
-            continueSectors[cIdx].time = totalElapsedAtPause - lastContStart; // 合計からの差分ではなく直近のCONT開始からの経過
+            continueSectors[cIdx].time = totalElapsedAtPause - lastContStart;
             mode = "FINISHED";
+            document.body.classList.add('mode-finished'); // 全終了時にリザルトモード適用
         }
         renderMain();
     }
@@ -210,12 +210,12 @@
             mode = "RUNNING";
         } else {
             if (mode === "FINISHED") {
-                // すべてのQが終わった後の新しいCONTセクター追加
                 continueSectors.push({ time: null });
                 currentIdx = sectors.length + continueSectors.length - 1;
                 lastContStart = totalElapsedAtPause; 
             }
             mode = "RUNNING";
+            document.body.classList.remove('mode-finished'); // CONT再開時はリザルトモード解除
         }
         startTime = now;
         runTimerLoop();
@@ -239,12 +239,23 @@
             clearInterval(timerInterval); 
             totalElapsedAtPause = totalMs; 
             mode = "FINISHED"; 
+            document.body.classList.add('mode-finished'); // 全Q終了時にリザルトモード適用
         }
         localStorage.setItem('exam-f1-data', JSON.stringify(sectors));
         renderMain();
     }
 
-    function resetAll() { clearInterval(timerInterval); mode = "READY"; currentIdx = 0; lapTimes = []; totalElapsedAtPause = 0; continueSectors = []; renderMain(); document.getElementById('main-timer').innerHTML = "00<span>:</span>00<span>.</span>00"; }
+    function resetAll() { 
+        clearInterval(timerInterval); 
+        mode = "READY"; 
+        currentIdx = 0; 
+        lapTimes = []; 
+        totalElapsedAtPause = 0; 
+        continueSectors = []; 
+        document.body.classList.remove('mode-finished'); // リセット時に解除
+        renderMain(); 
+        document.getElementById('main-timer').innerHTML = "00<span>:</span>00<span>.</span>00"; 
+    }
 
     function runTimerLoop() {
         clearInterval(timerInterval);
