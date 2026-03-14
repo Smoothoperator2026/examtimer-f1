@@ -27,12 +27,8 @@
         #main-timer { font-size: clamp(2.5rem, 8vw, 3.5rem); font-family: 'Roboto Mono'; font-weight: 700; font-variant-numeric: tabular-nums; }
         #main-timer span { color: var(--f1-red); }
 
-        /* 合計タイム表示位置の調整 */
-        .summary-wrapper { padding: 0 15px 10px 15px; }
-        .total-summary { text-align: center; padding: 10px; background: rgba(0,210,30,0.1); border-radius: 8px; font-weight: bold; color: var(--status-green); border: 1px solid var(--status-green); font-size: 1.1rem; }
-
         .scroll-area { flex: 1; overflow-y: auto; padding: 0 15px; scroll-behavior: smooth; }
-        .sector-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 60vh; }
+        .sector-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 65vh; }
         
         .sector-row { 
             display: grid; grid-template-columns: 60px 1.2fr 1fr 1fr; align-items: center; 
@@ -83,7 +79,6 @@
     <div class="header-area">
         <div class="timer-display"><div id="main-timer">00<span>:</span>00<span>.</span>00</div></div>
     </div>
-    <div class="summary-wrapper" id="summary-area"></div>
     <div class="scroll-area" id="scroll-container">
         <div class="sector-list" id="sector-list"></div>
     </div>
@@ -109,7 +104,7 @@
     let sectors = JSON.parse(localStorage.getItem('exam-f1-data')) || [{target: 250, best: null}, {target: 250, best: null}, {target: 250, best: null}];
     let currentTheme = localStorage.getItem('exam-f1-theme') || '#050505';
     let continueSectors = [];
-    let timerInterval, mode = "READY", currentIdx = 0, lapTimes = [], totalElapsedAtPause = 0, startTime = 0;
+    let timerInterval, mode = "READY", currentIdx = 0, lapTimes = [], totalElapsedAtPause = 0, startTime = 0, lastContStart = 0;
 
     function setTheme(color) { 
         currentTheme = color; 
@@ -121,14 +116,7 @@
 
     function renderMain() {
         const list = document.getElementById('sector-list'); list.innerHTML = '';
-        const summary = document.getElementById('summary-area'); summary.innerHTML = '';
         setTheme(currentTheme);
-
-        if (mode === "FINISHED") {
-            document.getElementById('main-screen').classList.add('mode-finished');
-            const total = lapTimes.reduce((a,b)=>a+b, 0);
-            summary.innerHTML = `<div class="total-summary">TOTAL: ${(total/1000).toFixed(2)}s</div>`;
-        }
 
         sectors.forEach((s, i) => {
             const row = createRow(`Q${i+1}`, s.target, s.best, i, false);
@@ -145,7 +133,7 @@
             row.classList.add('row-cont');
             const absIdx = sectors.length + i;
             if (absIdx < currentIdx) row.classList.add('row-past');
-            if (absIdx === currentIdx && mode === "RUNNING") row.classList.add('row-active');
+            if (absIdx === currentIdx && (mode === "RUNNING" || mode === "FINISHED")) row.classList.add('row-active');
             if (cs.time !== null) applySectorStats(row, i, cs.time, null, true);
             list.appendChild(row);
         });
@@ -193,12 +181,17 @@
     function stopTimerAction() {
         clearInterval(timerInterval);
         const now = Date.now();
-        totalElapsedAtPause += (now - startTime);
+        const currentSessionMs = (now - startTime);
+        totalElapsedAtPause += currentSessionMs;
 
         if (currentIdx < sectors.length) {
-            mode = "PAUSED"; // 設定セクター内なら一時停止
+            // STOPした時点のセクタータイムを画面上に反映
+            const totalMs = totalElapsedAtPause;
+            const sMs = totalMs - (lapTimes.reduce((a,b)=>a+b, 0));
+            const tEl = document.getElementById(`t-${currentIdx}`);
+            if (tEl) tEl.innerText = (sMs/1000).toFixed(2);
+            mode = "PAUSED";
         } else {
-            // 全セクター終了後のCONT中ならリザルトモードへ
             const cIdx = currentIdx - sectors.length;
             continueSectors[cIdx].time = now - lastContStart;
             mode = "FINISHED";
@@ -251,15 +244,19 @@
 
             if (currentIdx < sectors.length) {
                 const sMs = totalMs - (lapTimes.reduce((a,b)=>a+b, 0));
-                document.getElementById(`t-${currentIdx}`).innerText = (sMs/1000).toFixed(2);
+                const tEl = document.getElementById(`t-${currentIdx}`);
+                if (tEl) tEl.innerText = (sMs/1000).toFixed(2);
                 const dEl = document.getElementById(`d-tg-${currentIdx}`);
-                const diff = (Math.floor(sMs/100) - sectors[currentIdx].target) / 10;
-                dEl.innerText = (diff > 0 ? "+" : "") + diff.toFixed(1);
-                dEl.className = 'd-tg ' + (diff > 0 ? 'delta-plus' : 'delta-minus');
+                if (dEl) {
+                    const diff = (Math.floor(sMs/100) - sectors[currentIdx].target) / 10;
+                    dEl.innerText = (diff > 0 ? "+" : "") + diff.toFixed(1);
+                    dEl.className = 'd-tg ' + (diff > 0 ? 'delta-plus' : 'delta-minus');
+                }
             } else {
                 const cIdx = currentIdx - sectors.length;
                 const cMs = now - lastContStart;
-                document.getElementById(`ct-${cIdx}`).innerText = (cMs/1000).toFixed(2);
+                const ctEl = document.getElementById(`ct-${cIdx}`);
+                if (ctEl) ctEl.innerText = (cMs/1000).toFixed(2);
             }
         }, 50);
     }
@@ -267,7 +264,10 @@
     function scrollToLatest() {
         const sc = document.getElementById('scroll-container');
         const rows = document.querySelectorAll('.sector-row');
-        if (rows[currentIdx]) sc.scrollTo({ top: (currentIdx * 93), behavior: 'smooth' });
+        if (!rows[currentIdx]) return;
+        const rowHeight = 85 + 8;
+        const targetPos = currentIdx < 2 ? 0 : (currentIdx - 1) * rowHeight;
+        sc.scrollTo({ top: targetPos, behavior: 'smooth' });
     }
 
     function openConfig() { document.getElementById('main-screen').style.display='none'; document.getElementById('config-screen').style.display='flex'; renderConfig(); }
