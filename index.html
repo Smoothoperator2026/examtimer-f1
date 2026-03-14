@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>F1 Pro Stopwatch v8</title>
+    <title>F1 Pro Stopwatch v10</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -35,11 +35,11 @@
         .row-green  { background: var(--status-green); color: #000; }
         .row-yellow { background: var(--status-yellow); color: #000; }
         
-        /* 空白を大きくして、最新を中央付近に保つ */
-        .spacer { height: 250px; }
+        /* 最後に巨大な余白を入れる（スクロールの自由度を最大に） */
+        .spacer { height: 80vh; }
 
         /* フッター */
-        .footer-area { background: var(--f1-black); padding: 10px 15px 25px 15px; border-top: 1px solid #222; }
+        .footer-area { background: var(--f1-black); padding: 10px 15px 25px 15px; border-top: 1px solid #222; z-index: 100; }
         .btn-container { display: flex; justify-content: space-around; gap: 10px; }
         .f1-btn { min-width: 85px; height: 85px; border-radius: 50%; border: none; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; text-align: center; }
         .btn-start { background: var(--f1-red); color: white; font-size: 0.7rem; }
@@ -133,15 +133,32 @@
 
     function createBtn(c, t, f) { const b = document.createElement('button'); b.className=`f1-btn ${c}`; b.innerText=t; b.onclick=f; return b; }
 
-    // スクロール調整：最新の2つ前が見えるように
-    function scrollToView() {
+    // --- 【修正ポイント】デバイスに合わせて最適なスクロール位置を計算 ---
+    function scrollToLatest() {
         const sc = document.getElementById('scroll-container');
         const rows = document.querySelectorAll('.sector-row');
-        if (rows.length > 0) {
-            const targetRow = rows[Math.max(0, rows.length - 1)];
-            const offset = targetRow.offsetTop - 80; // タイマーの下付近に最新が来るように
-            sc.scrollTo({ top: offset, behavior: 'smooth' });
+        if (rows.length === 0) return;
+
+        const latestRow = rows[rows.length - 1];
+        
+        // 画面の高さに応じてスクロールの「余裕分」を変える
+        // スマホ(高さ少): 中央付近 / PC(高さ大): 画面の少し上目
+        let offsetRatio = 0.4; // デフォルトは画面中央より少し上
+        
+        if (window.innerHeight > 800) {
+            // PCや大型タブレット
+            offsetRatio = 0.3; 
+        } else if (window.innerHeight < 600) {
+            // 小さなスマホ
+            offsetRatio = 0.5;
         }
+
+        const targetPos = latestRow.offsetTop - (sc.clientHeight * offsetRatio);
+        
+        sc.scrollTo({
+            top: Math.max(0, targetPos),
+            behavior: 'smooth'
+        });
     }
 
     function startSession() {
@@ -158,6 +175,7 @@
         if (mode === "CONT_STOPPED") {
             continueSectors[continueSectors.length - 1].time = pausedTime;
             renderMain();
+            scrollToLatest();
         } else { renderButtons(); }
     }
 
@@ -180,13 +198,14 @@
             renderMain(); currentIdx++;
             if (currentIdx === sectors.length) { clearInterval(timerInterval); mode = "FINISHED"; renderButtons(); }
             localStorage.setItem('f1-v5-data', JSON.stringify(sectors));
-            scrollToView();
+            scrollToLatest();
         }
     }
 
     function startContinue() {
         mode = "CONT_RUNNING"; continueSectors.push({ time: null });
-        renderMain(); startTime = Date.now(); runTimerLoop(); scrollToView();
+        renderMain(); startTime = Date.now(); runTimerLoop();
+        setTimeout(scrollToLatest, 50);
     }
 
     function resetAll() { clearInterval(timerInterval); mode = "READY"; continueSectors = []; lapTimes = []; renderMain(); document.getElementById('main-timer').innerHTML = "00<span>:</span>00<span>.</span>00"; }
@@ -224,6 +243,10 @@
         sectors[si].target = (m*600)+(s*10)+t;
     }
     document.getElementById('btn-save').onclick = () => { localStorage.setItem('f1-v5-data', JSON.stringify(sectors)); document.getElementById('config-screen').style.display='none'; document.getElementById('main-screen').style.display='flex'; renderMain(); };
+
+    // リサイズ時にもスクロール位置を調整
+    window.addEventListener('resize', scrollToLatest);
+
     renderMain();
 </script>
 </body>
